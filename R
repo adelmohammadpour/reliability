@@ -1,0 +1,1297 @@
+#Assuming Z follows a beta distribution with parameters (a, b),
+#and X and Y follow gamma distributions with parameters (alpha1, beta1) and (alpha2, beta2) respectively, 
+#we're interested in finding out the distribution of T = ZX. 
+#which is represented as pdf_T."
+
+
+
+pdf_T <- function(t, alpha1, beta1, a, b) {
+  numerator <- gamma(a + b) * beta1^alpha1 * t^(alpha1 - 1) * exp(-beta1 * t)
+  denominator <- gamma(alpha1) * gamma(a) * gamma(b)
+  integrand <- function(s) exp(-beta1 * t * s) * s^(b - 1) * (1 + s)^(alpha1 - a - b)
+  integral <- integrate(integrand, lower = 0, upper = Inf)$value
+  return(numerator / denominator * integral)
+}
+
+
+# We want to verify if this is a valid probability density function (pdf_T), meaning it is non-negative and its integral over 
+t>0 equals one for different parameter values 
+
+
+#So choose different values for the parameters below
+
+
+alpha1 <- 2
+beta1 <- 5
+a <- 3.5
+b <- 5
+
+# Define the integrand function
+
+integrand <- function(s, t, alpha1, beta1, a, b) {
+  exp(-beta1 * t * s) * s^(b - 1) * (1 + s)^(alpha1 - a - b)
+}
+
+# Define the PDF function
+
+pdf_T <- function(t, alpha1, beta1, a, b) {
+  numerator <- gamma(a + b) * beta1^alpha1 * t^(alpha1 - 1) * exp(-beta1 * t)
+  denominator <- gamma(alpha1) * gamma(a) * gamma(b)
+  integral <- sapply(t, function(t_val) integrate(integrand, lower = 0, upper = Inf, 
+                                                 t = t_val, alpha1 = alpha1, beta1 = beta1, a = a, b = b)$value)
+  return(numerator / denominator * integral)
+}
+
+# Perform integration for t > 0
+integral_result1 <- integrate(pdf_T, lower = 0, upper = Inf, alpha1 = alpha1, beta1 = beta1, a = a, b = b)
+integral_result1
+
+
+# Non negative property of pdf
+
+pdf_T<- function(t, alpha1, beta1, a, b) {
+  numerator <- gamma(a + b) * beta1^alpha1 * t^(alpha1 - 1) * exp(-beta1 * t)
+  denominator <- gamma(alpha1) * gamma(a) * gamma(b)
+  integral <- sapply(t, function(t_val) integrate(integrand, lower = 0, upper = Inf, 
+                                                 t = t_val, alpha1 = alpha1, beta1 = beta1, a = a, b = b)$value)
+  return(numerator / denominator * integral)
+}
+
+# Define a range of t values
+t_values <- seq(0, 10, by = 0.1)  # Adjust the range and increment as needed
+
+# Calculate the PDF values for the given t values
+pdf_values <- pdf_T(t_values, alpha1, beta1, a, b)
+
+all_non_negative <- all(pdf_values >= 0)
+
+# Print the result
+if (all_non_negative) {
+  print("The PDF is non-negative for all values of t.")
+} else {
+  print("The PDF is not non-negative for all values of t.")
+}
+#--------------------------------------------------------------------------------------
+
+#Assuming Z follows a  uniform distribution with parameters (0, 1), it means that a and b are 1 
+#and X and Y follow gamma distributions with parameters (alpha1, beta1) and (alpha2, beta2) respectively, 
+#we're interested in finding out the distribution of T = ZX in this case
+#which is represented as pdf_T."
+
+#In this case, the formula for pdf_T would be simplified to pdf_T_reduce. To do so substitute
+a=b=1 into the pdf_T to obtain it.
+
+alpha1 <- 2
+beta1 <- 5
+a <- 1
+b <- 1
+
+# Define the integrand function
+
+integrand <- function(s, t, alpha1, beta1, a, b) {
+  exp(-beta1 * t * s) * s^(b - 1) * (1 + s)^(alpha1 - a - b)
+}
+
+# Define the PDF function
+
+pdf_T_reduce <- function(t, alpha1, beta1, a, b) {
+  numerator <- gamma(a + b) * beta1^alpha1 * t^(alpha1 - 1) * exp(-beta1 * t)
+  denominator <- gamma(alpha1) * gamma(a) * gamma(b)
+  integral <- sapply(t, function(t_val) integrate(integrand, lower = 0, upper = Inf, 
+                                                 t = t_val, alpha1 = alpha1, beta1 = beta1, a = a, b = b)$value)
+  return(numerator / denominator * integral)
+}
+
+# Perform integration for t > 0
+integral_a_1_b_1 <- integrate(pdf_T_reduce, lower = 0, upper = Inf, alpha1 = alpha1, beta1 = beta1, a = a, b = b)
+integral_a_1_b_1
+
+
+#Another approach is to simplify the formula to obtain iT
+#library(expint)# For using gammainc
+
+pdf_T_reduce <- function(x,alpha,beta){ 
+  ifelse(x>0,beta/gamma(alpha)*gammainc(alpha - 1, beta*x),0)
+}
+
+alpha <- 2
+beta <- 8
+
+integrate(function(x) pdf_T_reduce(x, alpha, beta), 0, Inf)$value
+#-------------------------------------------------------------------------------------------------------------------------
+# Now consider that T=ZX where Z follows beta (a,b) and X and Y are gamma (alpha1,beta1) and (alpha2,beta2), respectively
+# Here we want to calculate the reliability parameter Ru=P(T>Y) through several approaches
+
+#One way is to calculate the formula straightforwardly using a triple integral, considering T ~ pdf_T(aT0,bT0) and Y~gamma(a20,b20)
+​
+aT0=5;bT0=2;a20=1.2;b20=1.5;a=1;b=5 
+
+RuGenral = ((bT0)^(aT0)*(b20)^(a20)*gamma(a+b)/(gamma(aT0)*gamma(a)*gamma(b)*gamma(a20)))*
+integrate(Vectorize(function(y) { 
+    integrate(Vectorize(function(t) { 
+      integrate(function(s){ 
+        t^(aT0-1)*y^(a20-1)*exp(-b20*y)*(1+s)^(aT0-a-b)*s^(b-1)*exp(-bT0*t*(s+1))
+      }, 0, Inf)$value     
+    }), y, Inf)$value       
+  }), 0,Inf)$value
+
+RuGenral
+
+#Output:0.3154183
+
+#Second way: the strong law of large numbers 
+#Consider that \(y_{1}, y_{2}, \ldots, y_{N}\) and \(z_{1}, z_{2}, \ldots, z_{N}\) are simulated data from \(Y\) and \(Z\).
+Check with the simulation study
+
+N= 1e6
+yi = rgamma(N,a20,b20)
+zi = rbeta(N,1,5)
+h = (1- pgamma(yi/zi , aT0 , bT0) )
+RuGenral = mean(h)
+RuGenral 
+#RuGenral:0.3155064
+
+
+#Third way: Monte carlo simulation 
+N= 1e6
+T=rbeta(N,1,5)*rgamma(N,aT0,bT0)
+Y = rgamma(N,a20,b20)
+mean(T>Y)
+
+#Output: 0.315119
+
+#Now consider that Z ~ uniform(0,1)and y~(a20,b20) #So in Ru we have a=b=1
+
+#First_way:  in RuGeneral substitute a=b=1
+
+aT0=5;bT0=2;a20=1.2;b20=1.5;a=1;b=1
+
+RuGenral = ((bT0)^(aT0)*(b20)^(a20)*gamma(a+b)/(gamma(aT0)*gamma(a)*gamma(b)*gamma(a20)))*
+integrate(Vectorize(function(y) { 
+    integrate(Vectorize(function(t) { 
+      integrate(function(s){ 
+        t^(aT0-1)*y^(a20-1)*exp(-b20*y)*(1+s)^(aT0-a-b)*s^(b-1)*exp(-bT0*t*(s+1))
+      }, 0, Inf)$value     
+    }), y, Inf)$value       
+  }), 0,Inf)$value
+
+# 0.649542
+
+
+
+#Second_way: remove a and  b from RuGeneral to get
+Ru = ((bT0)^(aT0)*(b20)^(a20)/(gamma(aT0)*gamma(a20)))*integrate(Vectorize(function(y) { 
+    integrate(Vectorize(function(t) { 
+      integrate(function(s){ 
+        t^(aT0-1)*y^(a20-1)*exp(-b20*y)*(1+s)^(aT0-2)*exp(-bT0*t*(s+1))
+      }, 0, Inf)$value     
+    }), y, Inf)$value       
+  }), 0,Inf)$value
+
+#0.649542
+ 
+#Third_way: Monte carlo
+N= 1e6
+T=runif(N)*rgamma(N,aT0,bT0)
+Y = rgamma(N,a20,b20)
+mean(T>Y)
+
+#0.649739
+
+
+#Fourth way: Strong law of  large number
+
+N= 1e6
+Yi = rgamma(N,a20,b20)
+zi = runif(N,0,1)
+h = (1- pgamma(Yi/zi , aT0 , bT0) )
+mean(h)
+#0.6488233
+
+# One notable calculation we can make is when a = b = 1, aT0 = 2, and a20 = 1.
+# In this scenario, RuGeneral would have a closed form of b20 / (bT0 + b20).
+
+aT0=2;bT0=2;a20=1;b20=1.5;a=1;b=1
+
+Ru = ((bT0)^(aT0)*(b20)^(a20)/(gamma(aT0)*gamma(a20)))*
+integrate(Vectorize(function(y) { 
+    integrate(Vectorize(function(t) { 
+      integrate(function(s){ 
+        t^(aT0-1)*y^(a20-1)*exp(-b20*y)*(1+s)^(aT0-2)*exp(-bT0*t*(s+1))
+      }, 0, Inf)$value     
+    }), y, Inf)$value       
+  }), 0,Inf)$value
+
+
+#0.4285714
+
+b20/(bT0+b20)
+#0.4285714
+
+
+
+N= 1e6
+Yi = rgamma(N,a20,b20)
+zi = runif(N,0,1)
+h = (1- pgamma(Yi/zi , aT0 , bT0) )
+mean(h)
+#0.4285392
+
+
+# Also, when a = b = 1 and aT0 = 1 and a20 = 1, RuGeneral would have a closed form of 1-(bT0/b20)*log(1+(b20/bT0)).
+
+aT0=1;bT0=2;a20=1;b20=1.5;a=1;b=1
+
+1-(bT0/b20)*log(1+(b20/bT0))
+
+
+
+RuGenral = ((bT0)^(aT0)*(b20)^(a20)*gamma(a+b)/(gamma(aT0)*gamma(a)*gamma(b)*gamma(a20)))*
+integrate(Vectorize(function(y) { 
+    integrate(Vectorize(function(t) { 
+      integrate(function(s){ 
+        t^(aT0-1)*y^(a20-1)*exp(-b20*y)*(1+s)^(aT0-a-b)*s^(b-1)*exp(-bT0*t*(s+1))
+      }, 0, Inf)$value     
+    }), y, Inf)$value       
+  }), 0,Inf)$value
+
+#0.2538455
+
+
+#Another case we can consider is when Z follows a uniform distribution between 1 and 2, so P(T>Y) would  be simplified into(T=ZX)
+1-(bT0/b20)*log(1+(b20/(bT0+b20)))
+
+
+#Strong law of large numbers
+N= 1e6
+Yi = rgamma(N,a20,b20)
+zi = runif(N,1,2)
+h = (1- pgamma(Yi/zi , aT0 , bT0) )
+mean(h)
+
+# 0.5247298
+
+
+#Simulation Montecarlo
+N= 1e6
+T=runif(N,1,2)*rgamma(N,aT0,bT0)
+Y = rgamma(N,a20,b20)
+mean(T>Y)
+
+
+
+#The reader may also be interested in calculating this reliability without considering  Z. It means that P(X>Y)
+
+Check the value of R through simulation and formula
+aT0=1.5;bT0=5;a20=1.75;b20=2.5 
+
+#First way: Fomula X~gamma(aT0,bT0) and Y~gamma(a20,b20)
+
+RH <- integrate(Vectorize(function(y) { 
+gamma(aT0+a20)/(gamma(aT0)*gamma(a20))*(1-y)^(aT0-1)*(y)^(a20-1)
+}), 0,b20 /(bT0 + b20))$value
+RH 
+
+# 0.2318267
+
+#Second way: Simulation
+
+y=runif(N,0,b20 /(bT0 + b20))
+H=gamma(aT0+a20)/(gamma(aT0)*gamma(a20))*(1-y)^(aT0-1)*(y)^(a20-1)*(b20 /(bT0 + b20))
+R=mean(H)
+R
+
+# 0.2318704
+
+
+Or
+pbeta(b20/(bT0 + b20),a20,aT0) 
+
+#0.2318266
+
+Or
+
+integrand <- function(t) {
+  t^(a20 - 1) * (1 - t)^(aT0 - 1)
+}
+
+(gamma(aT0 + a20) / (gamma(aT0) * gamma(a20))) * integrate(integrand, lower = 0, upper = b20 / (bT0 + b20))$value
+# 0.2318269
+
+
+Or
+N= 1e7
+X=rgamma(N,aT0,bT0)
+Y = rgamma(N,a20,b20)
+mean(X>Y)
+#0.2318029
+
+#----------------------------------Plots
+# In this section, we aim to demonstrate the relationship between three reliability parameters:
+#   1. P(ZX > Y) where Z follows a uniform distribution on the interval (0, 1),
+#   2. P(X > Y), and
+#   3. P(UX > Y) where U follows a uniform distribution on the interval (1, 2).
+# We expect Ru=P(ZX > Y) < R=P(X > Y) < Ro=P(UX > Y) because the strength of the system would increase.
+
+
+# The first plot will be generated by considering b20 with various values on the x-axis,
+# and the corresponding reliability values will be placed on the y-axis.
+aT0 <- 1.5
+bT0 <- 2.5
+b20 <- seq(0, 3, by = 0.5)
+a20 <- 1.5
+N <- 1e6
+
+calculate_quantities <- function(b20) {
+  Yi <- rgamma(N, a20, b20)
+
+  zi <- runif(N)
+  h <- (1 - pgamma(Yi / zi, aT0, bT0))
+  Ru <- mean(h)
+
+  zii <- runif(N, 1, 2)
+  hoo <- (1 - pgamma(Yi / zii, aT0, bT0))
+  Ro <- mean(hoo)
+
+  y <- runif(N, 0, b20 / (bT0 + b20))
+  H <- gamma(aT0 + a20) / (gamma(aT0) * gamma(a20)) * (1 - y)^(aT0 - 1) * y^(a20 - 1) * (b20 / (bT0 + b20))
+  R <- mean(H)
+
+  
+  return(c(Ru = Ru, Ro = Ro, R = R))
+}
+
+results <- t(sapply(b20, calculate_quantities))
+
+df <- data.frame(b20 = b20, results)
+library(ggplot2)
+
+ggplot(df, aes(x = b20)) +
+  geom_line(aes(y = Ru, color = "Ru"), linetype = "solid", size = 1) +
+  geom_line(aes(y = Ro, color = "Ro"), linetype = "dotted", size = 1) +
+  geom_line(aes(y = R, color = "R"), linetype = "dashed", size = 1) +
+  labs(
+    title = "",          
+    x = expression(beta[2]), 
+    y = "",                           
+  ) +
+  ylab(expression(R~(beta[2]))) +  # Update this line to set the y-axis label
+  theme_minimal() +
+  theme(
+    axis.line = element_line(size = 1.1),    # Set axis lines bolder
+    axis.line.x = element_line(size = 1.1),  # Set x-axis line bolder
+    axis.line.y = element_line(size = 1.1),  # Set y-axis line bolder
+    legend.position = "bottom"              # Set legend position to bottom
+  ) +
+  scale_color_manual("", values = c("Ru" = "red", "Ro" = "blue", "R" = "green"))  # Add custom colors to legend
+#----------------------------------
+# The second plot will be generated by considering bT0 with various values on the x-axis,
+# and the corresponding reliability values will be placed on the y-axis.
+aT0 <- 1.5
+b20 <- 2.5
+bT0 <- seq(0, 3, by = 0.5) 
+a20 <- 1.5
+N <- 1e6
+
+calculate_quantities <- function(bT0) {
+  Yi <- rgamma(N, a20, b20)
+  zi <- runif(N)
+  h <- (1 - pgamma(Yi / zi, aT0, bT0))
+  Ru <- mean(h)
+
+  zii <- runif(N, 1, 2)
+  hoo <- (1 - pgamma(Yi / zii, aT0, bT0))
+  Ro <- mean(hoo)
+
+  y <- runif(N, 0, b20 / (bT0 + b20))
+  H <- gamma(aT0 + a20) / (gamma(aT0) * gamma(a20)) * (1 - y)^(aT0 - 1) * y^(a20 - 1) * (b20 / (bT0 + b20))
+  R <- mean(H)
+  
+  return(c(Ru = Ru, Ro = Ro, R = R))
+}
+
+results <- t(sapply(bT0, calculate_quantities))
+
+df <- data.frame(bT0 = bT0, results)
+library(ggplot2)
+
+ggplot(df, aes(x = bT0)) +
+  geom_line(aes(y = Ru, color = "Ru"), linetype = "solid", size = 1) +
+  geom_line(aes(y = Ro, color = "Ro"), linetype = "dotted", size = 1) +
+  geom_line(aes(y = R, color = "R"), linetype = "dashed", size = 1) +
+  
+  labs(
+    title = "",          
+    x = expression(beta[1]), 
+    y = "",                           
+  ) +
+  
+  ylab(expression(R~(beta[1]))) +  # Update this line to set the y-axis label
+  
+  theme_minimal() +
+  theme(
+    axis.line = element_line(size = 1.1),    # Set axis lines bolder
+    axis.line.x = element_line(size = 1.1),  # Set x-axis line bolder
+    axis.line.y = element_line(size = 1.1),  # Set y-axis line bolder
+    legend.position = "bottom"              # Set legend position to bottom
+  ) +
+  scale_color_manual("", values = c("Ru" = "red", "Ro" = "blue", "R" = "green"))  # Add custom colors to legend
+
+#--------------------------------------
+# In this section, we aim to compare the robustness of Ru and R via Mean Squared Error (MSE).
+# In Case 1, we assume that Ru is a real value. We calculate the Maximum Likelihood Estimation (MLE) of Ru and R,
+# and then compute the MSE of Ruhat and Rhat.
+# We expect that MSE(Ruhat)< MSE(Rhat)
+# Here again we consider that a=b=1 it means that Z~uniform(0,1)
+# n is the number of simulated observations
+# m is the number of iteration 
+
+#library(expint)
+library(stats)
+
+Case1 = function(n, m, aT0, bT0, a20, b20){
+
+  ft <- function(x, alpha, beta){ 
+    ifelse(x > 0, beta/gamma(alpha) * gammainc(alpha - 1, beta*x), 0)
+  }
+
+  Ru = ((bT0)^(aT0) * (b20)^(a20) / (gamma(aT0) * gamma(a20))) * integrate(Vectorize(function(y) { 
+    integrate(Vectorize(function(t) { 
+      integrate(function(s){ 
+        t^(aT0 - 1) * y^(a20 - 1) * exp(-b20 * y) * (1 + s)^(aT0 - 2) * exp(-bT0 * t * (s + 1))
+      }, 0, 3e1)$value     
+    }), y, 3e1)$value       
+  }), 0, 3e1)$value
+  
+  RuH = numeric(m)
+  RH = numeric(m)
+  
+  for(j in 1:m){
+    Ti <- rgamma(n, aT0, bT0) * runif(n)
+    Y <- rgamma(n, a20, b20)
+    
+    #----
+    LL_T <- function(theta){
+      a = theta[1]^2
+      b = theta[2]^2
+      if(any(!is.finite(ft(Ti, a, b)))) return(Inf) # Skip if ft returns non-finite values
+      -1 * prod((ft(Ti, a, b)))
+    }
+    
+    init_value = c(4 * mean(Ti)^2 / (3 * mean(Ti^2) - 4 * mean(Ti)^2),
+                    2 * mean(Ti) / (3 * mean(Ti^2) - 4 * mean(Ti)^2))
+    
+   MLE_T <- nlminb(start = init_value, objective = LL_T, lower = c(0, 0), upper = Inf)$par
+
+
+    
+    #---- Other parts of the code ----
+    
+    # Estimate MLE for Y
+    LL_Y <- function(theta){
+      a = theta[1]^2
+      b = theta[2]^2
+      -1 * sum(dgamma(Y, a, b, log = TRUE))
+    }
+    
+    init_value = c(mean(Y)^2 / (mean(Y^2) - mean(Y)^2),
+                   mean(Y) / (mean(Y^2) - mean(Y)^2))
+    
+    MLE_Y <- nlminb(start = init_value, objective = LL_Y, lower = c(0, 0))$par
+    
+    # Estimate MLE for X
+    LL_X <- function(theta){
+      a = theta[1]^2
+      b = theta[2]^2
+      -1 * sum(dgamma(Ti, a, b, log = TRUE))
+    }
+    
+    init_value = c(mean(Ti)^2 / (mean(Ti^2) - mean(Ti)^2),
+                   mean(Ti) / (mean(Ti^2) - mean(Ti)^2))
+    
+    MLE_X <- nlminb(start = init_value, objective = LL_X, lower = c(0, 0))$par
+    
+    #---------------
+
+    alpha1T = MLE_T[1]
+    beta1T = MLE_T[2]
+    alpha2 = MLE_Y[1]
+    beta2 = MLE_Y[2]
+    alpha1 = MLE_X[1]
+    beta1 = MLE_X[2]
+    
+    N = 1e6
+    Yi = rgamma(N, alpha2, beta2)
+    zi = runif(N, 0, 1)
+    h = (1 - pgamma(Yi / zi, alpha1T, beta1T))
+    RuH[j] = mean(h)
+    
+    # Estimate R hat which is written in Eq(7) in the manuscript
+    RH[j] = pbeta(beta2 / (beta1 + beta2), alpha2, alpha1)
+  }
+
+  # Calculate MSEs and return results
+  MSERu = mean((RuH - Ru)^2)
+  MSER = mean((RH - Ru)^2)
+  
+  return(list("MSE_Ru" = MSERu , "MSE_R" = MSER, "Ru" = Ru))
+}
+
+Case1(n = 55, m = 300,aT0 = 1.5, bT0 = 1.5, a20 = 1.2, b20 = 1.5)
+
+
+
+# MSE_Ru        MSE_R           Ru 
+0.0006007878 0.0090688825 0.3063434765 
+
+#----------------------------------------------------------------------
+
+# Case2 is started from here
+# In this case, we expect to see the robustness of R
+# much more than that of Ru (MSE of Rhat < MSE of Ruhat)#
+
+Case2 = function(n,m,a10,b10,a20,b20){
+
+  ft <- function(x,alpha,beta){ 
+    ifelse(x>0,beta/gamma(alpha)*gammainc(alpha - 1, beta*x),0)
+  }
+  
+  #R = gamma(a10 + a20)/(gamma(a10)*gamma(a20))*integrate(Vectorize(function(u) { 
+   #(1-u)^(a10 - 1)*u^(a20 - 1)
+    #}), 0, b20/(b10 + b20))$value
+
+
+ R=pbeta(b20/(b10 + b20),a20,a10)     
+  
+RuH = NULL
+RH = NULL
+  for(j in 1:m){
+ try({
+    X <- rgamma(n,a10,b10)
+    Y <- rgamma(n,a20,b20)
+    
+    #----
+    
+    LL_T <- function(theta){
+      a = theta[1]^2
+      b = theta[2]^2
+      -1*prod(ft(X,a,b))
+    }
+    # LL_T(Ti,1.5,0.5)
+    
+init_value = c(4*mean(X)^2/(3*mean(X^2)-4*mean(X)^2),
+               2*mean(X)/(3*mean(X^2)-4*mean(X)^2))
+  #------ 1) optim()
+  #MLE_T <- (optim(init_value,LL_T)$par)
+  #MLE_T
+  #------ 2) nlminb()
+  MLE_T = (nlminb(start = init_value, objective = LL_T,
+            lower = c(0,0), upper = Inf)$par)
+  #-----3) nlm()
+  #MLE_T = nlm(f= LL_T, p = init_value)$estimate
+    
+    #----
+    
+    LL_Y <- function(theta){
+      a = theta[1]^2
+      b = theta[2]^2
+      -1*sum(dgamma(Y,a,b,log = T))
+    }
+    
+    init_value = c(mean(Y)^2/(mean(Y^2)-mean(Y)^2),
+                   mean(Y)/(mean(Y^2)-mean(Y)^2))
+    
+     #----1) optim()
+    #MLE_Y <- (optim(init_value,LL_Y)$par)
+    #MLE_Y
+   
+    #------ 2) nlminb()
+     MLE_Y = (nlminb(start = init_value, objective = LL_Y,
+             lower = c(0,0), upper = Inf)$par)
+
+    #-----3) nlm()
+    #MLE_Y = nlm(f= LL_Y, p = init_value)$estimate
+#-------------------------------------------------------------------
+    
+    #----
+    
+    LL_X <- function(theta){
+      a = theta[1]^2
+      b = theta[2]^2
+      -1*sum(dgamma(X,a,b,log = T))
+    }
+    
+    init_value = c(mean(X)^2/(mean(X^2)-mean(X)^2),
+                   mean(X)/(mean(X^2)-mean(X)^2))
+
+    #----1) optim()
+     #MLE_X <- (optim(init_value,LL_X)$par)
+     #MLE_X
+
+     #----2) nlminb()
+      MLE_X = (nlminb(start = init_value, objective = LL_X,
+            lower = c(0,0), upper = Inf)$par)
+    #-----3) nlm()
+    #MLE_X = nlm(f= LL_X, p = init_value)$estimate
+    
+    #---------------
+    
+    alpha1T= MLE_T[1]
+    beta1T = MLE_T[2]
+    alpha2= MLE_Y[1]
+    beta2 = MLE_Y[2]
+    alpha1= MLE_X[1]
+    beta1 = MLE_X[2]
+
+
+#Estimate Rhatu here
+   
+    RuH[j] <- beta1T^(alpha1T)*beta2^(alpha2)/(gamma(alpha1T)*gamma(alpha2))*integrate(Vectorize(function(y) { 
+      integrate(Vectorize(function(t) { 
+        integrate(function(s){ 
+          t^(alpha1T-1)*y^(alpha2-1)*exp(-beta2*y)*(1+s)^(alpha1T-2)*exp(-beta1T*t*(s+1))
+         }, 0, 2e1)$value     
+     }), y, 2e1)$value       
+    }), 0,2e1)$value
+    
+
+   RH[j]=pbeta(beta2/(beta1 + beta2),alpha2,alpha1)  
+
+ }, silent = TRUE) 
+  }
+  
+  MSERu = mean((RuH-R)^2)
+  MSER = mean((RH-R)^2)
+
+  c("MSE_Ru" = MSERu , "MSE_R" = MSER,"R"=R)
+  
+}
+Case2(n=55,m=500,a10=1,b10=1.5,a20=1,b20=1.5)
+     MSE_Ru        MSE_R            R 
+0.0045644179 0.0007392487 0.5000000000 
+
+
+#-----------------------------------------------
+#In this section the confidence interval of Ru woul be obtained by Delta and bootstrap
+#we consider that a=b=1, aT0=2 and a20=1 so Ru would be simpilfied into b20 /(b20+bT0) 
+  (Section 5 of the manuscript
+library(expint)
+
+n=75
+bT0=1.5
+b20=3
+
+  ft <- function(x,alpha,beta){ 
+    ifelse(x>0,beta/gamma(alpha)*gammainc(alpha - 1, beta*x),0)
+  }
+  
+
+  # Calculate Ru
+
+  Ru=b20 /(b20+bT0) 
+  set.seed(123)  
+  
+  # Generate Ti values
+  Ti <- rgamma(n, 2, bT0) * runif(n)
+  
+  # Define the log-likelihood function for Ti
+  LL_T <- function(b) {
+    -1 * prod(ft(Ti, 2, b))
+  }
+  
+  # Initial guess for MLE_T
+  init_value_T <- 1 / (mean(Ti))
+  
+  # Calculate MLE for Ti
+  MLE_T <- nlminb(start = init_value_T, objective = LL_T,
+                  lower = 0, upper = Inf)$par
+  MLE_T
+
+
+  sum_result <- sum(((Ti^2 * exp(-MLE_T* Ti) * (exp(-MLE_T* Ti) - gammainc(1, MLE_T* Ti)))
+                / (gammainc(1, MLE_T* Ti))^2))
+  I11_NEW<- round(n / MLE_T^2 + sum_result,3)
+
+
+  # Generate Y values
+  Y <- rgamma(n, 1, b20)
+  
+LL_Y <- function(b) {
+  -1 * sum(dgamma(Y, 1, b, log = TRUE))
+}
+
+init_value_Y <- 1 / mean(Y)
+
+# Calculate MLE for Y
+MLE_Y <- nlminb(start = init_value_Y, objective = LL_Y, lower = 0.00001, upper = Inf)$par
+
+MLE_Y
+  
+  # Calculate RuH
+
+  RuH=MLE_Y/(MLE_Y+MLE_T)
+
+# Number of bootstrap samples
+
+B <- 10000
+bootstrap_RuH <- numeric(B)  # Vector to store bootstrap RuH values
+
+for (i in 1:B) {
+  # Generate bootstrap samples with increased size
+  Ti_bootstrap <- sample(Ti, replace = TRUE, size = length(Ti)*2)
+  Y_bootstrap <- sample(Y, replace = TRUE, size = length(Y)*2)
+
+  # Define likelihood function for Ti
+  LL_T_boot <- function(b) {
+    -1 * prod(ft(Ti_bootstrap, 2, b))
+  }
+  
+  # Initial guess for MLE_T
+  init_value_T_boot <- 1 / (mean(Ti_bootstrap))
+  
+  # Calculate MLE for Ti
+  MLE_T_bootstrap <- nlminb(start = init_value_T_boot, objective = LL_T_boot,
+                            lower = 0, upper = Inf)$par
+
+  # Define likelihood function for Y
+  LL_Y_boot <- function(b) {
+    -1 * sum(dgamma(Y_bootstrap, 1, b, log = TRUE))
+  }
+  
+  # Initial guess for MLE_Y
+  init_value_Y_boot <- 1 / mean(Y_bootstrap)
+  
+  # Calculate MLE for Y
+  MLE_Y_bootstrap <- nlminb(start = init_value_Y_boot, objective = LL_Y_boot,
+                            lower = 0.00001, upper = Inf)$par  
+
+  # Compute RuH using bootstrap parameters
+  RuH_bootstrap <- MLE_Y_bootstrap / (MLE_Y_bootstrap + MLE_T_bootstrap)
+  bootstrap_RuH[i] <- RuH_bootstrap
+}
+
+sorted_RuH <- sort(bootstrap_RuH)
+
+
+  
+  # Compute confidence interval using bootstrap percentiles
+  alpha <- 0.05
+  lower_percentile <- alpha / 2
+  upper_percentile <- 1 - alpha / 2
+  lower_bound_boot <- quantile(sorted_RuH, lower_percentile)
+  upper_bound_boot <- quantile(sorted_RuH, upper_percentile)
+  LbOOT <- upper_bound_boot - lower_bound_boot  
+  # Calculate derivatives
+
+  dRu_dBeta1 <- -MLE_Y/(MLE_Y+MLE_T)^2
+  dRu_dBeta2 <- MLE_T/(MLE_Y+MLE_T)^2
+  
+  # Calculate variance
+  I11_NEW =max(0, I11_NEW)
+  I11_NEW_inv <- ifelse( I11_NEW!= 0, 1 /  I11_NEW , 0)
+  I_22 <- n / MLE_Y^2
+  I_22_inv <- ifelse(I_22 != 0, 1 / I_22, 0)
+  Var_Ru_hat <-(dRu_dBeta1)^2 * I11_NEW_inv + 2 * dRu_dBeta1 * dRu_dBeta2*0 + (dRu_dBeta2)^2 * I_22_inv
+  # Calculate confidence interval
+  CI_lower_delta <- RuH - 1.96 * sqrt(Var_Ru_hat)
+  CI_upper_delta <- RuH + 1.96 * sqrt(Var_Ru_hat)
+  LMLE <- CI_upper_delta -  CI_lower_delta
+  
+ print(list(
+n=n,
+Ru=Ru,
+bT0=round(bT0,4),
+b20=round(b20,4),
+  LbOOT = round(LbOOT,4),
+  LMLE =round(LMLE,4) ,
+  RuH = round(RuH,4),
+  CI_delta = paste("(", round(CI_lower_delta,4), ", ", round(CI_upper_delta,4), ")", sep = ""),
+  CI_boot = paste("(", round(lower_bound_boot,4), ", ", round(upper_bound_boot,4), ")", sep = "")
+))
+
+cat(
+  n, " & ", 
+  round(Ru, 4), " & ",
+  round(bT0, 4), " & ", 
+  round(b20, 4), " & ", 
+  round(RuH, 4), " & ", 
+  round(LMLE, 4), " & ", 
+  "(", round(CI_lower_delta, 4), ", ", round(CI_upper_delta, 4), ")", 
+  " & ", round(LbOOT, 4), " & ", 
+  "(", round(lower_bound_boot, 4), ", ", round(upper_bound_boot, 4), ")"
+)
+
+
+
+#---------------------------------------------------------------------------------
+#Real data
+#In this section the real dataset is considered
+#we investigate whether $ft$, demonstrates superior performance
+#compared to the gamma distribution when utilized on artificially generated data $(T)$
+#If this circumstance arises, we denote the reliability for data $T$ and $Y$ as $R^{u}$. 
+#Conversely, if $ft$ does not outperform the gamma distribution, 
+#then we calculate the reliability between $T$ and $Y$ with the assistance of $R$.
+
+library(expint)
+
+X<-c(219.3, 79.4, 86.0, 150.2, 21.7, 18.5, 121.9, 40.5,147.1, 35.1, 42.3,48.7)
+
+length(X)
+
+library(fitdistrplus)
+G=fitdist(X,distr="gamma",method="mle")
+ks.test(X,"pgamma",shape=G$estimate[1],rate=G$estimate[2])
+
+
+my_vector_Y<-c(21.8, 70.7, 24.4, 138.6, 151.9, 75.3, 12.3, 95.5, 98.1, 43.2, 28.6,46.9)
+
+library(fitdistrplus)
+GG=fitdist(my_vector_Y,distr="gamma",method="mle")
+ks.test(my_vector_Y,"pgamma",shape=GG$estimate[1],rate=GG$estimate[2])
+
+my_vector_X=runif(12)*X
+#We choose one of the vector obtained by runif(12)*X ans rename it as T
+T<-c(102.7, 8, 21.6, 74.7, 10.1, 7.1, 60.9, 16.2, 139.2, 28.2, 3.9, 20.5)
+
+
+
+
+# We estimate the parameters of T with gamma and f_{T}(t) respectively
+LL_X <- function(theta) {
+           a <- theta[1]
+           b <- theta[2]
+          -sum(dgamma(T, shape = a, rate = b, log = TRUE))
+          }
+
+           init_value <- c(mean(T)^2 / (mean(T^2) - mean(T)^2),
+                mean(T) / (mean(T^2) - mean(T)^2))
+           MLEX <- nlminb(start = init_value, objective = LL_X, lower = c(0, 0))
+
+  a10 <- MLEX$par[1]
+  b10 <- MLEX$par[2]
+
+  #With X data find the parameters in distribution under H1              
+library(expint)
+   
+  ft <- function(x, alpha, beta) {
+    ifelse(x > 0, beta / gamma(alpha) * gammainc(alpha - 1, beta * x), 0)
+  }
+
+
+
+
+  LL_T <- function(theta){
+    a = theta[1]^2
+    b = theta[2]^2
+    -1 * prod(ft(T, a, b))
+  }
+  
+  init_value <- c(
+    4 * mean(T)^2 / (3 * mean(T^2) - 4 * mean(T)^2),
+    2 * mean(T) / (3 * mean(T^2) - 4 * mean(T)^2)
+  )
+  
+  MLE1 <- nlminb(start = init_value, objective = LL_T, lower = c(0, 0), upper = Inf)
+          #nlm(f= LL_T, p = init_value)$estimate
+  aT0 <- MLE1$par[1]
+  bT0 <- MLE1$par[2]
+
+
+
+#Estimate the parameter of Y using the distrbution of Y i.e., gamma
+ LL_Y <- function(theta) {
+           a <- theta[1]
+           b <- theta[2]
+          -sum(dgamma(my_vector_Y, shape = a, rate = b, log = TRUE))
+          }
+
+           init_value <- c(mean(my_vector_Y)^2 / (mean(my_vector_Y^2) - mean(my_vector_Y)^2),
+                mean(my_vector_Y) / (mean(my_vector_Y^2) - mean(my_vector_Y)^2))
+           MLEY <- nlminb(start = init_value, objective = LL_Y, lower = c(0, 0))
+
+
+  a20 <- MLEY$par[1]
+  b20 <- MLEY$par[2]
+
+
+
+set.seed(1500)
+
+# Now consider that ft is on the H0 so generate random numbers from H0
+# and calculate critical_L
+L<-c()
+for (i in 1:1000){
+r = runif(12)*rgamma(12,aT0,bT0)
+L[i]=sum(log(dgamma(r,a10,b10)))-sum(log(ft(r,aT0,bT0)))
+}
+L
+
+critical_L=sort(L)[950]
+
+LLL=sum(log(dgamma(T,a10,b10)))-sum(log(ft(T,aT0 ,bT0)))
+If LLL>critical_L  #then reject H0
+p_value_f_t = sum(L >= LLL) / length(L) 
+
+
+# As it can be observed f_{T}(t) is a good fit for T data
+# Now consider that Gamma is on the H0
+# So generate random numbers from gamma
+
+#For gamma
+
+B<-c()
+for (i in 1:1000){
+b = rgamma(12,a10,b10)
+B[i]=sum(log(ft(b,aT0,bT0)))-sum(log(dgamma(b,a10,b10)))
+}
+B
+
+critical_B=sort(B)[950]
+
+BBB=sum(log(ft(T,aT0 ,bT0)))-sum(log(dgamma(T,a10,b10)))
+If BBB>critical_B #then reject H0
+p_value_gaamma = sum(B >= BBB) / length(B)
+
+#It seems that gamma is a good fit for T as well
+#But at the end the P-value when f_{T} is into H0 is greater than the P-value of gamma
+so we can say if we have two vectors of data such as below
+
+
+T<-c(102.7, 8, 21.6, 74.7, 10.1, 7.1, 60.9, 16.2, 139.2, 28.2, 3.9, 20.5)
+my_vector_Y<-c(21.8, 70.7, 24.4, 138.6, 151.9, 75.3, 12.3, 95.5, 98.1, 43.2, 28.6,46.9)
+
+
+And if we want to calculate the reliability parameter, it should be better to use Ru
+i.e., estimate the parameter of T with fT and parameters of Y with gamma
+
+Ru = ((bT0)^(aT0)*(b20)^(a20)/(gamma(aT0)*gamma(a20)))*integrate(Vectorize(function(y) { 
+    integrate(Vectorize(function(t) { 
+      integrate(function(s){ 
+        t^(aT0-1)*y^(a20-1)*exp(-b20*y)*(1+s)^(aT0-2)*exp(-bT0*t*(s+1))
+      }, 0, Inf)$value     
+    }), y, Inf)$value       
+  }), 0,Inf)$value
+
+Ru 
+
+
+#The confidence interval using Bootstrap approache
+#since boot has a better performance so here we just construct the confidence interval 
+#with boot
+
+library(expint)
+
+ft <- function(x, alpha, beta) {
+   ifelse(x > 0, beta/gamma(alpha) * gammainc(alpha - 1, beta * x), 0)
+ }
+
+B <- 1000
+bootstrap_RuH <- numeric(B)  # Vector to store bootstrap RuH values
+
+for (i in 1:B) {
+  # Generate bootstrap samples
+  Ti_bootstrap <- sample(T, replace = TRUE, size = length(T)*2)
+  Y_bootstrap <- sample(my_vector_Y, replace = TRUE,size=length(my_vector_Y)*2)
+  
+  # Estimate parameters using bootstrap samples
+  LL_T <- function(theta){
+    a = theta[1]^2
+    b = theta[2]^2
+    -1 * prod(ft(Ti_bootstrap, a, b))
+  }
+  
+  init_value_BOOT <- c(
+    4 * mean(Ti_bootstrap)^2 / (3 * mean(Ti_bootstrap^2) - 4 * mean(Ti_bootstrap)^2),
+    2 * mean(Ti_bootstrap) / (3 * mean(Ti_bootstrap^2) - 4 * mean(Ti_bootstrap)^2)
+  )
+  
+  MLE1 <- 
+    nlminb(start = init_value_BOOT, objective = LL_T, lower = c(0, 0), upper = Inf) 
+  
+
+  aT0 <- MLE1$par[1]
+  bT0 <- MLE1$par[2]
+  
+  LL_Y <- function(theta) {
+    a <- theta[1]
+    b <- theta[2]
+    -sum(dgamma(Y_bootstrap, shape = a, rate = b, log = TRUE))
+  }
+  
+  init_value_Y_BOOT <- c(
+    mean(Y_bootstrap)^2 / (mean(Y_bootstrap^2) - mean(Y_bootstrap)^2),
+    mean(Y_bootstrap) / (mean(Y_bootstrap^2) - mean(Y_bootstrap)^2)
+  )
+  
+  MLEY <- 
+    nlminb(start =  init_value_Y_BOOT, objective = LL_Y, lower = c(0, 0))
+
+  
+  a20 <- MLEY$par[1]
+  b20 <- MLEY$par[2]
+  
+  # Compute RuH using bootstrap parameters
+  #T=runif(1000000)*rgamma(1000000,aT0,bT0)
+  #Y = rgamma(1000000,a20,b20)
+   N= 1e6
+   Yi = rgamma(N,a20,b20)
+   zi = runif(N,0,1)
+   h = (1- pgamma(Yi/zi , aT0 , bT0) )
+   bootstrap_RuH[i]<- mean(h)
+  #bootstrap_RuH[i]<-mean(T>Y)
+}
+
+ # bootstrap_RuH[i] <-((bT0)^(aT0)*(b20)^(a20)/(gamma(aT0)*gamma(a20)))*integrate(Vectorize(function(y) { 
+ #   integrate(Vectorize(function(t) { 
+ #     integrate(function(s){ 
+ #       t^(aT0-1)*y^(a20-1)*exp(-b20*y)*(1+s)^(aT0-2)*exp(-bT0*t*(s+1))
+ #     }, 0, 50)$value     
+ #   }), y, 50)$value       
+ # }), 0,50)$value
+ # }
+
+sorted_RuH <- sort(bootstrap_RuH)
+
+  sorted_RuH
+  # Compute confidence interval using bootstrap percentiles
+  alpha <- 0.05
+  lower_percentile <- alpha / 2
+  upper_percentile <- 1 - alpha / 2
+  lower_bound_boot <- quantile(sorted_RuH, lower_percentile)
+  upper_bound_boot <- quantile(sorted_RuH, upper_percentile)
+CI=c(round(lower_bound_boot,2),round(upper_bound_boot,2))
+CI
+#0.16 ,0.48
+#--------------------------------------data2---------------------------------------
+This dataset has been gotten from the following paper
+Inference for the generalized exponential stress-strength model
+
+library(expint)
+
+# Values for May
+X<- c(26, 14, 27, 15, 16, 16, 11, 10, 14, 12, 15, 40, 29, 13, 20, 41, 31, 28, 11)
+
+my_vector_YY<- c(13, 20, 24, 3, 8, 10, 10, 2, 19, 8, 17, 8, 10, 9, 15, 10, 37, 11, 8)
+
+library(fitdistrplus)
+G=fitdist(X,distr="gamma",method="mle")
+ks.test(X,"pgamma",shape=G$estimate[1],rate=G$estimate[2])
+
+length(my_vector_Y)
+library(fitdistrplus)
+GG=fitdist(my_vector_YY,distr="gamma",method="mle")
+ks.test(my_vector_YY,"pgamma",shape=GG$estimate[1],rate=GG$estimate[2])
+
+my_vector_X=runif(19)*X
+TT<- c(0.8830035, 11.3605678, 19.0275294, 8.0054686, 6.9943957, 3.0781350, 6.9451793, 0.2154932, 2.4737652, 0.6135490, 12.8245908, 9.2264358, 2.5617123, 10.3653105, 10.2039633, 33.2662823, 15.9807695, 26.8050037, 5.9160089)
+
+
+
+round(my_vector_X)
+
+
+LL_XX <- function(theta) {
+           a <- theta[1]
+           b <- theta[2]
+          -sum(dgamma(TT, shape = a, rate = b, log = TRUE))
+          }
+
+           init_value <- c(mean(TT)^2 / (mean(TT^2) - mean(TT)^2),
+                mean(TT) / (mean(TT^2) - mean(TT)^2))
+           MLEXX <- nlminb(start = init_value, objective = LL_XX, lower = c(0, 0))
+
+  a10 <- MLEXX$par[1]
+  b10 <- MLEXX$par[2]
+
+
+#now estimate the parameters under H0:fT
+   library(expint)
+  ft <- function(x, alpha, beta) {
+    ifelse(x > 0, beta / gamma(alpha) * gammainc(alpha - 1, beta * x), 0)
+  }
+
+
+
+
+  LL_T <- function(theta){
+    a = theta[1]^2
+    b = theta[2]^2
+    -1 * prod(ft(TT, a, b))
+  }
+  
+  init_value <- c(
+    4 * mean(TT)^2 / (3 * mean(TT^2) - 4 * mean(TT)^2),
+    2 * mean(TT) / (3 * mean(TT^2) - 4 * mean(TT)^2)
+  )
+  
+  MLE1 <- nlminb(start = init_value, objective = LL_T, lower = c(0, 0), upper = Inf)
+          #nlm(f= LL_T, p = init_value)$estimate
+  aT0 <- MLE1$par[1]
+  bT0 <- MLE1$par[2]
+
+
+
+
+ LL_Y <- function(theta) {
+           a <- theta[1]
+           b <- theta[2]
+          -sum(dgamma(my_vector_YY, shape = a, rate = b, log = TRUE))
+          }
+
+           init_value <- c(mean(my_vector_YY)^2 / (mean(my_vector_YY^2) - mean(my_vector_YY)^2),
+                mean(my_vector_YY) / (mean(my_vector_YY^2) - mean(my_vector_YY)^2))
+           MLEY <- nlminb(start = init_value, objective = LL_Y, lower = c(0, 0))
+
+
+  a20 <- MLEY$par[1]
+  b20 <- MLEY$par[2]
+
+
+L<-c()
+for (i in 1:1000){
+r = runif(19)*rgamma(19,aT0,bT0)
+L[i]=sum(log(dgamma(r,a10,b10)))-sum(log(ft(r,aT0,bT0)))
+}
+L
+
+critical_L=sort(L)[950]
+
+LLL=sum(log(dgamma(TT,a10,b10)))-sum(log(ft(TT,aT0 ,bT0)))
+If LLL>critical_L  #then reject H0
+p_value_f_t = sum(L >= LLL) / length(L)
+
+#Now consider gamma is into H0
+B<-c()
+for (i in 1:1000){
+b = rgamma(19,a10,b10)
+B[i]=sum(log(ft(b,aT0,bT0)))-sum(log(dgamma(b,a10,b10)))
+}
+B
+
+critical_B=sort(B)[950]
+
+BBB=sum(log(ft(TT,aT0 ,bT0)))-sum(log(dgamma(TT,a10,b10)))
+If BBB>critical_B #then reject H0
+p_value_gaamma = sum(B >= BBB) / length(B)
+
+#Now as you can see the gamma fits the T as well but the p-value for ft 
+#Is greater than gamma
+so if we have two vectors of observations and want to calculate their reliability
+it should be better to use Ru
+
+
+
+Ru = ((bT0)^(aT0)*(b20)^(a20)/(gamma(aT0)*gamma(a20)))*integrate(Vectorize(function(y) { 
+    integrate(Vectorize(function(t) { 
+      integrate(function(s){ 
+        t^(aT0-1)*y^(a20-1)*exp(-b20*y)*(1+s)^(aT0-2)*exp(-bT0*t*(s+1))
+      }, 0, Inf)$value     
+    }), y, Inf)$value       
+  }), 0,Inf)$value
+
+Ru 
+
+R<Ru
+
+The confidene interval with boot
+
+
+B <- 1000
+bootstrap_RuHhhh <- numeric(B)  # Vector to store bootstrap RuH values
+
+for (i in 1:B) {
+  # Generate bootstrap samples
+  TiT_bootstrap <- sample(TT, replace = TRUE,size = length(TT)*2)
+  YY_bootstrap <- sample(my_vector_YY, replace = TRUE,size = length(my_vector_YY)*2)
+  
+  # Estimate parameters using bootstrap samples
+  LL_T <- function(theta){
+    a = theta[1]^2
+    b = theta[2]^2
+    -1 * prod(ft(TiT_bootstrap, a, b))
+  }
+  
+  init_value_boot_dtwo <- c(
+    4 * mean(TiT_bootstrap)^2 / (3 * mean(TiT_bootstrap^2) - 4 * mean(TiT_bootstrap)^2),
+    2 * mean(TiT_bootstrap) / (3 * mean(TiT_bootstrap^2) - 4 * mean(TiT_bootstrap)^2)
+  )
+  
+  MLE1 <- (nlminb(start = init_value_boot_dtwo, objective = LL_T, lower = c(0, 0), upper = Inf)  )
+  
+
+  aT0 <- MLE1$par[1]
+  bT0 <- MLE1$par[2]
+  
+  LL_Y <- function(theta) {
+    a <- theta[1]
+    b <- theta[2]
+    -sum(dgamma(YY_bootstrap, shape = a, rate = b, log = TRUE))
+  }
+  
+  init_value_Y_dtwo <- c(
+    mean(YY_bootstrap)^2 / (mean(YY_bootstrap^2) - mean(YY_bootstrap)^2),
+    mean(YY_bootstrap) / (mean(YY_bootstrap^2) - mean(YY_bootstrap)^2)
+  )
+  
+  MLEY <- (nlminb(start =  init_value_Y_dtwo, objective = LL_Y, lower = c(0, 0)) )
+
+  
+  a20 <- MLEY$par[1]
+  b20 <- MLEY$par[2]
+  
+  # Compute RuH using bootstrap parameters
+   N= 1e6
+   YiI = rgamma(N,a20,b20)
+   ziI = runif(N,0,1)
+   hI = (1- pgamma(YiI/ziI , aT0 , bT0) )
+   bootstrap_RuHhhh[i]<- mean(hI)
+}
+
+sorted_RuHHH <- sort(bootstrap_RuHhhh)
+sorted_RuHHH=sorted_RuHHH[sorted_RuHHH != 0]
+
+  # Compute confidence interval using bootstrap percentiles
+  alpha <- 0.05
+  lower_percentile_DT <- alpha / 2
+  upper_percentile_DT  <- 1 - alpha / 2
+  lower_bound_boot <- quantile(sorted_RuHHH, lower_percentile_DT)
+  upper_bound_boot <- quantile(sorted_RuHHH, upper_percentile_DT)
+CI_DT=c(round(lower_bound_boot,2),round(upper_bound_boot,2))
+CI_DT 
+
+#0.24,0.49
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
